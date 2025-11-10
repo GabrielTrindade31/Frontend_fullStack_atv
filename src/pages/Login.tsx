@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import TextType from "../components/shared/TextType";
 import MetaBalls from "../components/shared/MetaBalls";
+import GoogleLoginButton from "../components/auth/GoogleLoginButton";
 import { useAuth } from "../hooks/useAuth";
 import { authService } from "../lib/auth";
 
@@ -130,6 +131,23 @@ export default function LoginPage() {
               {isLoading ? "Entrando..." : "Entrar"}
             </button>
           </form>
+
+          {/* Divisor */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-600"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-gray-800 text-gray-400">ou</span>
+            </div>
+          </div>
+
+          {/* Botão do Google */}
+          <div className="mb-4">
+            <GoogleLoginButton 
+              onError={(errorMsg) => setError(errorMsg)}
+            />
+          </div>
 
           <div className="mt-4 text-center">
             <Link

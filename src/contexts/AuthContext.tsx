@@ -135,6 +135,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     } finally {
+      // Desconecta do Google se estiver disponível
+      if (typeof window !== 'undefined' && window.google?.accounts?.id) {
+        try {
+          window.google.accounts.id.disableAutoSelect();
+        } catch (error) {
+          console.error('Erro ao desconectar do Google:', error);
+        }
+      }
+      
       authService.clearAuth();
       setUser(null);
       setPermissions([]);

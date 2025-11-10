@@ -26,15 +26,26 @@ Sistema de autenticação completo com integração ao backend, incluindo login,
 npm install
 ```
 
-3. Configure a variável de ambiente (opcional):
+3. Configure as variáveis de ambiente:
 
 Crie um arquivo `.env` na raiz do projeto:
 
 ```env
 VITE_API_URL=http://localhost:3000
+VITE_GOOGLE_CLIENT_ID=seu-client-id-aqui.apps.googleusercontent.com
 ```
 
-Se não configurar, o sistema usará `http://localhost:3000` por padrão.
+**Configuração do Google OAuth:**
+1. Acesse [Google Cloud Console](https://console.cloud.google.com/)
+2. Crie um projeto ou selecione um existente
+3. Vá em **APIs & Services** → **Credentials**
+4. Clique em **Create Credentials** → **OAuth client ID**
+5. Configure:
+   - **Application type**: Web application
+   - **Authorized JavaScript origins**: `http://localhost:3001` (desenvolvimento)
+6. Copie o **Client ID** e cole no `.env` como `VITE_GOOGLE_CLIENT_ID`
+
+Se não configurar `VITE_API_URL`, o sistema usará `http://localhost:3000` por padrão.
 
 ## 🏃 Executando o Projeto
 
@@ -93,7 +104,7 @@ O projeto está integrado com os seguintes endpoints do backend:
 
 - `POST /auth/register` - Cadastro de usuário
 - `POST /auth/login` - Login local
-- `POST /auth/google` - Login com Google (preparado)
+- `POST /auth/google` - Login com Google ✅
 - `POST /auth/refresh` - Atualizar sessão
 - `POST /auth/logout` - Logout
 - `GET /auth/me` - Obter perfil do usuário autenticado
@@ -105,10 +116,19 @@ O projeto está integrado com os seguintes endpoints do backend:
 
 ### Login
 
+**Login Local:**
 1. Acesse a página inicial (`/`)
 2. Digite seu email e senha
 3. Clique em "Entrar"
 4. Você será redirecionado automaticamente para o dashboard apropriado
+
+**Login com Google:**
+1. Acesse a página inicial (`/`)
+2. Clique no botão "Entrar com Google"
+3. Selecione sua conta Google e autorize o acesso
+4. Você será redirecionado automaticamente para o dashboard apropriado
+
+> **Nota:** O login com Google cria automaticamente uma conta se você ainda não tiver uma. Se você já tiver uma conta com o mesmo email, o sistema vinculará sua conta Google ao usuário existente.
 
 ### Cadastro
 
@@ -137,6 +157,13 @@ O sistema gerencia automaticamente:
 - **Access Token**: Expira em 15 minutos, renovado automaticamente
 - **Refresh Token**: Expira em 30 dias, rotacionado a cada uso
 - **Refresh automático**: O token é renovado 1 minuto antes da expiração
+
+### Logout
+
+O logout funciona tanto para login local quanto para login com Google:
+- Limpa todos os tokens e dados de autenticação
+- Desconecta da sessão do Google (se aplicável)
+- Redireciona para a página de login
 
 ### Uso do Hook useAuth
 
