@@ -66,40 +66,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       setIsLoading(true);
-      loadUserFromStorage();
       
-      // Verifica se há usuário no storage
-      const storedUser = authService.getUser();
+      try {
+        loadUserFromStorage();
+        
+        // Verifica se há usuário no storage
+        const storedUser = authService.getUser();
 
-      // Verifica se há tokens e tenta validar
-      const accessToken = authService.getAccessToken();
-      if (accessToken) {
-        if (authService.isTokenExpired(accessToken)) {
-          // Tenta renovar
-          const refreshed = await authService.refreshAccessToken();
-          if (refreshed) {
-            await refreshUser();
+        // Verifica se há tokens e tenta validar
+        const accessToken = authService.getAccessToken();
+        if (accessToken) {
+          if (authService.isTokenExpired(accessToken)) {
+            // Tenta renovar
+            const refreshed = await authService.refreshAccessToken();
+            if (refreshed) {
+              await refreshUser();
+            } else {
+              authService.clearAuth();
+              setUser(null);
+              setPermissions([]);
+            }
           } else {
-            authService.clearAuth();
-            setUser(null);
-            setPermissions([]);
+            // Token válido
+            // Se já temos um usuário válido no storage, não precisa chamar getMe imediatamente
+            // Apenas tenta atualizar em background (silentFail = true) sem bloquear
+            if (storedUser) {
+              // Tenta atualizar em background, mas não bloqueia o loading
+              refreshUser(true).catch(() => {
+                // Ignora erros em background
+              });
+              authService.startRefreshTimer();
+            } else {
+              // Se não temos usuário no storage, precisa buscar
+              // Adiciona timeout de segurança
+              const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout')), 5000)
+              );
+              
+              await Promise.race([refreshUser(), timeoutPromise]).catch(() => {
+                // Se der timeout ou erro, mantém o estado atual
+                if (import.meta.env.DEV) {
+                  console.warn('Timeout ou erro ao buscar usuário, mantendo estado atual');
+                }
+              });
+              authService.startRefreshTimer();
+            }
           }
-        } else {
-          // Token válido
-          // Se já temos um usuário válido no storage, não precisa chamar getMe imediatamente
-          // Apenas tenta atualizar em background (silentFail = true)
-          if (storedUser) {
-            // Tenta atualizar em background, mas não falha se der erro
-            refreshUser(true);
-          } else {
-            // Se não temos usuário no storage, precisa buscar
-            await refreshUser();
-          }
-          authService.startRefreshTimer();
         }
+      } catch (error) {
+        console.error('Erro ao inicializar autenticação:', error);
+        // Em caso de erro, limpa tudo para permitir acesso às páginas públicas
+        authService.clearAuth();
+        setUser(null);
+        setPermissions([]);
+      } finally {
+        // Garante que o loading sempre termina
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     };
 
     initializeAuth();
