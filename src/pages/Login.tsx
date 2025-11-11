@@ -209,7 +209,6 @@ export default function LoginPage() {
           onClick={() => setShowGoogleHelp((prev) => !prev)}
           className="w-full text-left text-xs sm:text-sm font-semibold text-purple-200 hover:text-purple-100 transition"
         >
-          {showGoogleHelp ? "Ocultar dicas para resolver o erro 400 do Google" : "Como resolver erros 400 no login com Google?"}
         </button>
 
         {showGoogleHelp && (
