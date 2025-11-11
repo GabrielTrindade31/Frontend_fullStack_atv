@@ -204,12 +204,6 @@ export default function LoginPage() {
       </div>
 
       <div className="space-y-3">
-        <button
-          type="button"
-          onClick={() => setShowGoogleHelp((prev) => !prev)}
-          className="w-full text-left text-xs sm:text-sm font-semibold text-purple-200 hover:text-purple-100 transition"
-        >
-        </button>
 
         {showGoogleHelp && (
           <div className="rounded-lg border border-purple-500/40 bg-purple-950/40 p-4 text-xs sm:text-sm text-purple-100 space-y-3">
