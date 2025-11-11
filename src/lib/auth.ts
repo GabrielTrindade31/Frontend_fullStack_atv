@@ -3,7 +3,6 @@ import { apiClient, type User } from './api';
 const ACCESS_TOKEN_KEY = 'accessToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
 const USER_KEY = 'user';
-const PERMISSIONS_KEY = 'permissions';
 
 export class AuthService {
   private refreshTimer: NodeJS.Timeout | null = null;
@@ -51,33 +50,11 @@ export class AuthService {
     return null;
   }
 
-  setPermissions(permissions: string[]) {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(permissions));
-    }
-  }
-
-  getPermissions(): string[] {
-    if (typeof window !== 'undefined') {
-      const permissionsStr = localStorage.getItem(PERMISSIONS_KEY);
-      if (!permissionsStr) return [];
-      try {
-        return JSON.parse(permissionsStr);
-      } catch {
-        // Se houver erro ao parsear, limpa o storage corrompido
-        localStorage.removeItem(PERMISSIONS_KEY);
-        return [];
-      }
-    }
-    return [];
-  }
-
   clearAuth() {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(ACCESS_TOKEN_KEY);
       localStorage.removeItem(REFRESH_TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
-      localStorage.removeItem(PERMISSIONS_KEY);
     }
     this.stopRefreshTimer();
   }
@@ -94,39 +71,6 @@ export class AuthService {
     return { valid: true };
   }
 
-  // Validação de data de nascimento
-  validateDateOfBirth(dateOfBirth: string): { valid: boolean; error?: string } {
-    if (!dateOfBirth) {
-      return { valid: false, error: 'Data de nascimento é obrigatória' };
-    }
-    const date = new Date(dateOfBirth);
-    const today = new Date();
-    const age = today.getFullYear() - date.getFullYear();
-    const monthDiff = today.getMonth() - date.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
-      const actualAge = age - 1;
-      if (actualAge < 13) {
-        return { valid: false, error: 'Você deve ter pelo menos 13 anos' };
-      }
-      if (actualAge > 120) {
-        return { valid: false, error: 'Data de nascimento inválida' };
-      }
-    } else {
-      if (age < 13) {
-        return { valid: false, error: 'Você deve ter pelo menos 13 anos' };
-      }
-      if (age > 120) {
-        return { valid: false, error: 'Data de nascimento inválida' };
-      }
-    }
-    
-    if (isNaN(date.getTime())) {
-      return { valid: false, error: 'Data de nascimento inválida' };
-    }
-    
-    return { valid: true };
-  }
 
   // Validação de senha conforme especificação
   validatePassword(password: string): { valid: boolean; error?: string } {
@@ -181,7 +125,6 @@ export class AuthService {
       const response = await apiClient.refreshToken({ refreshToken });
       this.setTokens(response.accessToken, response.refreshToken);
       this.setUser(response.user);
-      this.setPermissions(response.permissions);
       this.startRefreshTimer();
       return true;
     } catch (error) {

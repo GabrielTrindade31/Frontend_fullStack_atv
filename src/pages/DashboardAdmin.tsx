@@ -74,14 +74,11 @@ export default function AdminDashboard() {
             <div className="space-y-2 text-gray-300">
               <p><strong className="text-white">Nome:</strong> {user.name || 'N/A'}</p>
               <p><strong className="text-white">Email:</strong> {user.email || 'N/A'}</p>
-              <p><strong className="text-white">Data de Nascimento:</strong> {
-                user.dateOfBirth 
-                  ? new Date(user.dateOfBirth).toLocaleDateString('pt-BR') 
-                  : (user as any).birthDate
-                  ? new Date((user as any).birthDate).toLocaleDateString('pt-BR')
-                  : 'N/A'
-              }</p>
-              <p><strong className="text-white">Role:</strong> {user.role || 'N/A'}</p>
+              <p><strong className="text-white">Role:</strong> {user.role === 'customer' ? 'Cliente' : 'Administrador'}</p>
+              <p><strong className="text-white">Provider:</strong> {user.provider === 'google' ? 'Google' : 'Local'}</p>
+              {user.pictureUrl && (
+                <p><strong className="text-white">Foto:</strong> <img src={user.pictureUrl} alt="Avatar" className="w-16 h-16 rounded-full" /></p>
+              )}
               {import.meta.env.DEV && (
                 <p className="text-xs text-gray-500 mt-2 break-all">
                   Debug: user object = {JSON.stringify(user, null, 2)}

@@ -59,8 +59,11 @@ export default function ClientDashboard() {
             <div className="space-y-2 text-gray-300">
               <p><strong className="text-white">Nome:</strong> {user?.name}</p>
               <p><strong className="text-white">Email:</strong> {user?.email}</p>
-              <p><strong className="text-white">Data de Nascimento:</strong> {user?.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString('pt-BR') : 'N/A'}</p>
-              <p><strong className="text-white">Role:</strong> {user?.role}</p>
+              <p><strong className="text-white">Role:</strong> {user?.role === 'customer' ? 'Cliente' : 'Administrador'}</p>
+              <p><strong className="text-white">Provider:</strong> {user?.provider === 'google' ? 'Google' : 'Local'}</p>
+              {user?.pictureUrl && (
+                <p><strong className="text-white">Foto:</strong> <img src={user.pictureUrl} alt="Avatar" className="w-16 h-16 rounded-full" /></p>
+              )}
             </div>
           </div>
 

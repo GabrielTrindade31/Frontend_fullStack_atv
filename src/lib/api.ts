@@ -1,6 +1,6 @@
 // Normaliza a URL da API removendo barra final e garantindo formato correto
 const getApiBaseUrl = (): string => {
-  const url = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  const url = import.meta.env.VITE_API_URL || 'http://localhost:3333';
   // Remove barras no final
   return url.replace(/\/+$/, '');
 };
@@ -11,9 +11,9 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  dateOfBirth: string;
-  googleId: string | null;
-  role: 'client' | 'admin';
+  role: 'customer' | 'admin';
+  provider: 'local' | 'google';
+  pictureUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -21,28 +21,24 @@ export interface User {
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
+  expiresIn: number;
+  tokenType: string;
   user: User;
-  permissions: string[];
 }
 
-// Interface para dados de registro no frontend (usa dateOfBirth)
+// Interface para dados de registro no frontend
 export interface RegisterData {
   email: string;
   password: string;
   confirmPassword: string;
   name: string;
-  dateOfBirth: string;
-  role?: 'client' | 'admin';
 }
 
-// Interface para dados enviados ao backend (usa birthDate)
+// Interface para dados enviados ao backend
 interface RegisterRequestData {
   email: string;
   password: string;
-  confirmPassword: string;
   name: string;
-  birthDate: string;
-  role?: 'client' | 'admin';
 }
 
 export interface LoginData {
@@ -63,14 +59,51 @@ export interface ValidateTokenData {
 }
 
 export interface ValidateTokenResponse {
-  valid: boolean;
+  active: boolean;
   user: User;
-  permissions: string[];
-  token: {
-    subject: string;
-    email: string;
-    role: string;
-  };
+}
+
+// Interfaces para Tasks
+export type TaskStatus = 'pending' | 'in_progress' | 'completed';
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  dueDate: string | null;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTaskData {
+  title: string;
+  description?: string;
+  status?: TaskStatus;
+  dueDate?: string;
+}
+
+export interface UpdateTaskData {
+  title?: string;
+  description?: string;
+  status?: TaskStatus;
+  dueDate?: string | null;
+}
+
+export interface TaskResponse {
+  message: string;
+  task: Task;
+}
+
+export interface TasksResponse {
+  tasks: Task[];
+}
+
+export interface TaskQueryParams {
+  status?: TaskStatus;
+  title?: string;
+  dueDate?: string;
 }
 
 class ApiClient {
@@ -87,8 +120,6 @@ class ApiClient {
       email: 'Email',
       password: 'Senha',
       confirmPassword: 'Confirmar Senha',
-      birthDate: 'Data de Nascimento',
-      dateOfBirth: 'Data de Nascimento',
       role: 'Perfil',
     };
     return translations[field] || field;
@@ -262,8 +293,8 @@ class ApiClient {
     return response.json();
   }
 
-  async healthCheck(): Promise<{ status: string }> {
-    return this.request<{ status: string }>('/health/');
+  async healthCheck(): Promise<{ status: string; service: string }> {
+    return this.request<{ status: string; service: string }>('/health');
   }
 
   // Normaliza a resposta do backend para a interface User do frontend
@@ -272,22 +303,23 @@ class ApiClient {
       throw new Error('Usuário não encontrado na resposta do servidor');
     }
     return {
-      ...user,
-      // Converte birthDate (backend) para dateOfBirth (frontend) se necessário
-      dateOfBirth: user.birthDate || user.dateOfBirth || '',
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role === 'customer' ? 'customer' : (user.role === 'admin' ? 'admin' : 'customer'),
+      provider: user.provider || 'local',
+      pictureUrl: user.pictureUrl || null,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     };
   }
 
   async register(data: RegisterData): Promise<AuthResponse> {
-    // Converte dateOfBirth para birthDate (formato esperado pelo backend)
-    // Baseado no Swagger, o backend espera: name, email, password, confirmPassword, birthDate
-    // O campo role não é enviado no cadastro (o backend define o role padrão)
+    // Baseado na documentação, o backend espera apenas: name, email, password
     const requestData: RegisterRequestData = {
       name: data.name.trim(),
       email: data.email.trim().toLowerCase(),
       password: data.password,
-      confirmPassword: data.confirmPassword,
-      birthDate: data.dateOfBirth, // O backend espera birthDate no formato YYYY-MM-DD
     };
     
     const response = await this.request<AuthResponse>('/auth/register', {
@@ -295,7 +327,7 @@ class ApiClient {
       body: JSON.stringify(requestData),
     });
     
-    // Normaliza a resposta para garantir que dateOfBirth está presente
+    // Normaliza a resposta
     return {
       ...response,
       user: this.normalizeUser(response.user),
@@ -308,7 +340,7 @@ class ApiClient {
       body: JSON.stringify(data),
     });
     
-    // Normaliza a resposta para garantir que dateOfBirth está presente
+    // Normaliza a resposta
     return {
       ...response,
       user: this.normalizeUser(response.user),
@@ -334,7 +366,7 @@ class ApiClient {
         body: JSON.stringify(data),
       });
       
-      // Normaliza a resposta para garantir que dateOfBirth está presente
+      // Normaliza a resposta
       return {
         ...response,
         user: this.normalizeUser(response.user),
@@ -377,7 +409,7 @@ class ApiClient {
       body: JSON.stringify(data),
     });
     
-    // Normaliza a resposta para garantir que dateOfBirth está presente
+    // Normaliza a resposta
     return {
       ...response,
       user: this.normalizeUser(response.user),
@@ -391,49 +423,22 @@ class ApiClient {
     });
   }
 
-  async getMe(accessToken: string): Promise<{ user: User; permissions: string[] }> {
-    const response = await this.request<{ user: User; permissions: string[] }>('/auth/me', {
+  async getMe(accessToken: string): Promise<User> {
+    // Baseado na documentação, /auth/me retorna apenas o User diretamente
+    const response = await this.request<User>('/auth/me', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     });
     
-    // Verifica se a resposta tem user antes de normalizar
+    // Verifica se a resposta existe
     if (!response) {
       throw new Error('Resposta inválida do servidor: nenhuma resposta recebida');
     }
     
-    // Tenta diferentes formatos de resposta
-    let userData: User | null = null;
-    let permissionsData: string[] = [];
-    
-    if (response.user) {
-      userData = response.user;
-      permissionsData = response.permissions || [];
-    } else if ((response as any).data?.user) {
-      // Formato alternativo: { data: { user, permissions } }
-      userData = (response as any).data.user;
-      permissionsData = (response as any).data.permissions || [];
-    } else if ((response as any).data && typeof (response as any).data === 'object') {
-      // Se data é o próprio usuário
-      userData = (response as any).data;
-      permissionsData = (response as any).permissions || [];
-    }
-    
-    if (!userData) {
-      // Log detalhado em desenvolvimento
-      if (typeof window !== 'undefined' && import.meta.env.DEV) {
-        console.error('getMe - Resposta inesperada:', response);
-      }
-      throw new Error('Resposta inválida do servidor: usuário não encontrado na resposta');
-    }
-    
-    // Normaliza a resposta para garantir que dateOfBirth está presente
-    return {
-      user: this.normalizeUser(userData),
-      permissions: permissionsData,
-    };
+    // Normaliza a resposta
+    return this.normalizeUser(response);
   }
 
   async validateToken(data: ValidateTokenData): Promise<ValidateTokenResponse> {
@@ -453,8 +458,30 @@ class ApiClient {
     return response;
   }
 
-  async getUsers(accessToken: string): Promise<{ users: User[] }> {
-    return this.request<{ users: User[] }>('/auth/users', {
+  // Métodos para Tasks
+  async createTask(accessToken: string, data: CreateTaskData): Promise<TaskResponse> {
+    return this.request<TaskResponse>('/tasks', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getTasks(accessToken: string, params?: TaskQueryParams): Promise<TasksResponse> {
+    const queryString = params
+      ? '?' + new URLSearchParams(
+          Object.entries(params).reduce((acc, [key, value]) => {
+            if (value !== undefined && value !== null) {
+              acc[key] = String(value);
+            }
+            return acc;
+          }, {} as Record<string, string>)
+        ).toString()
+      : '';
+    
+    return this.request<TasksResponse>(`/tasks${queryString}`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -462,19 +489,42 @@ class ApiClient {
     });
   }
 
-  async getUserById(accessToken: string, id: string): Promise<{ user: User; permissions: string[] }> {
-    const response = await this.request<{ user: User; permissions: string[] }>(`/auth/users/${id}`, {
+  async getTaskById(accessToken: string, id: string): Promise<{ task: Task }> {
+    return this.request<{ task: Task }>(`/tasks/${id}`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     });
-    
-    // Normaliza a resposta para garantir que dateOfBirth está presente
-    return {
-      ...response,
-      user: this.normalizeUser(response.user),
-    };
+  }
+
+  async updateTask(accessToken: string, id: string, data: UpdateTaskData): Promise<TaskResponse> {
+    return this.request<TaskResponse>(`/tasks/${id}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async patchTask(accessToken: string, id: string, data: UpdateTaskData): Promise<TaskResponse> {
+    return this.request<TaskResponse>(`/tasks/${id}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTask(accessToken: string, id: string): Promise<void> {
+    return this.request<void>(`/tasks/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
   }
 }
 

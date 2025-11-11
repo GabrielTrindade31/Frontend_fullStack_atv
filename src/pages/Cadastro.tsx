@@ -10,8 +10,7 @@ export default function CadastroPage() {
     name: "", 
     email: "", 
     password: "", 
-    confirmPassword: "",
-    dateOfBirth: ""
+    confirmPassword: ""
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -63,21 +62,12 @@ export default function CadastroPage() {
       return;
     }
 
-    const dateValidation = authService.validateDateOfBirth(form.dateOfBirth);
-    if (!dateValidation.valid) {
-      setError(dateValidation.error || "Data de nascimento inválida");
-      setIsLoading(false);
-      return;
-    }
-
     try {
       await register({
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
         password: form.password,
-        confirmPassword: form.confirmPassword,
-        dateOfBirth: form.dateOfBirth,
-        role: 'client'
+        confirmPassword: form.confirmPassword
       });
       // O toast e redirecionamento serão feitos pelo useEffect
     } catch (err: any) {
@@ -161,21 +151,6 @@ export default function CadastroPage() {
                 placeholder="********"
                 autoComplete="new-password"
                 className="w-full px-3 py-2 border border-purple-500/50 rounded-lg bg-purple-950/60 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                required
-              />
-            </div>
-
-            <div className="mb-4">
-              <label htmlFor="dateOfBirth" className="block text-sm font-bold text-purple-200 mb-1">
-                Data de Nascimento
-              </label>
-              <input
-                type="date"
-                id="dateOfBirth"
-                value={form.dateOfBirth}
-                onChange={handleChange}
-                autoComplete="bday"
-                className="w-full px-3 py-2 border border-purple-500/50 rounded-lg bg-purple-950/60 text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
                 required
               />
             </div>

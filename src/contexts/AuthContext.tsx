@@ -4,7 +4,6 @@ import { authService } from '@/lib/auth';
 
 interface AuthContextType {
   user: User | null;
-  permissions: string[];
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (data: LoginData) => Promise<void>;
@@ -12,23 +11,19 @@ interface AuthContextType {
   googleLogin: (data: GoogleLoginData) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
-  hasPermission: (permission: string) => boolean;
   isAdmin: boolean;
-  isClient: boolean;
+  isCustomer: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [permissions, setPermissions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadUserFromStorage = useCallback(() => {
     const storedUser = authService.getUser();
-    const storedPermissions = authService.getPermissions();
     setUser(storedUser);
-    setPermissions(storedPermissions);
   }, []);
 
   const refreshUser = useCallback(async (silentFail = false) => {
@@ -37,23 +32,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!accessToken) {
         if (!silentFail) {
           setUser(null);
-          setPermissions([]);
         }
         return;
       }
 
-      const data = await apiClient.getMe(accessToken);
-      setUser(data.user);
-      setPermissions(data.permissions);
-      authService.setUser(data.user);
-      authService.setPermissions(data.permissions);
+      const userData = await apiClient.getMe(accessToken);
+      setUser(userData);
+      authService.setUser(userData);
     } catch (error) {
       console.error('Erro ao carregar usuário:', error);
       // Se silentFail for true, não limpa a autenticação (mantém o usuário do storage)
       if (!silentFail) {
         authService.clearAuth();
         setUser(null);
-        setPermissions([]);
       } else {
         // Apenas loga o erro, mas mantém o usuário do storage
         if (import.meta.env.DEV) {
@@ -84,7 +75,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } else {
               authService.clearAuth();
               setUser(null);
-              setPermissions([]);
             }
           } else {
             // Token válido
@@ -118,7 +108,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Em caso de erro, limpa tudo para permitir acesso às páginas públicas
         authService.clearAuth();
         setUser(null);
-        setPermissions([]);
       } finally {
         // Garante que o loading sempre termina
         setIsLoading(false);
@@ -133,9 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await apiClient.login(data);
       authService.setTokens(response.accessToken, response.refreshToken);
       authService.setUser(response.user);
-      authService.setPermissions(response.permissions);
       setUser(response.user);
-      setPermissions(response.permissions);
       authService.startRefreshTimer();
     } catch (error: any) {
       throw new Error(error.message || 'Erro ao fazer login');
@@ -147,9 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await apiClient.register(data);
       authService.setTokens(response.accessToken, response.refreshToken);
       authService.setUser(response.user);
-      authService.setPermissions(response.permissions);
       setUser(response.user);
-      setPermissions(response.permissions);
       authService.startRefreshTimer();
     } catch (error: any) {
       throw new Error(error.message || 'Erro ao cadastrar');
@@ -161,9 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await apiClient.googleLogin(data);
       authService.setTokens(response.accessToken, response.refreshToken);
       authService.setUser(response.user);
-      authService.setPermissions(response.permissions);
       setUser(response.user);
-      setPermissions(response.permissions);
       authService.startRefreshTimer();
     } catch (error: any) {
       throw new Error(error.message || 'Erro ao fazer login com Google');
@@ -190,23 +173,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       authService.clearAuth();
       setUser(null);
-      setPermissions([]);
     }
   };
 
-  const hasPermission = useCallback((permission: string): boolean => {
-    return permissions.includes(permission);
-  }, [permissions]);
-
   const isAdmin = user?.role === 'admin';
-  const isClient = user?.role === 'client';
+  const isCustomer = user?.role === 'customer';
   const isAuthenticated = !!user;
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        permissions,
         isLoading,
         isAuthenticated,
         login,
@@ -214,9 +191,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         googleLogin,
         logout,
         refreshUser,
-        hasPermission,
         isAdmin,
-        isClient,
+        isCustomer,
       }}
     >
       {children}

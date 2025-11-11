@@ -16,6 +16,7 @@ export function redirectToDashboard(user: User | null, navigate: NavigateFunctio
   if (user.role === 'admin') {
     navigate('/dashboard/admin');
   } else {
+    // customer ou qualquer outro role vai para dashboard do cliente
     navigate('/dashboard/client');
   }
 }

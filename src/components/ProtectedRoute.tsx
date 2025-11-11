@@ -20,7 +20,7 @@ export default function ProtectedRoute({
   requireAdmin = false,
   requireClient = false 
 }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, isAdmin, isClient, user } = useAuth();
+  const { isAuthenticated, isLoading, isAdmin, isCustomer, user } = useAuth();
   const location = useLocation();
 
   // Debug: Log para verificar o estado (apenas em desenvolvimento)
@@ -31,7 +31,7 @@ export default function ProtectedRoute({
       isLoading,
       isAuthenticated,
       isAdmin,
-      isClient,
+      isCustomer,
       userRole: user?.role,
       user: user,
     });
@@ -60,7 +60,7 @@ export default function ProtectedRoute({
   }
 
   // Se requer cliente mas não é cliente (é admin), redireciona para dashboard do admin
-  if (requireClient && !isClient) {
+  if (requireClient && !isCustomer) {
     // Log apenas em desenvolvimento
     if (import.meta.env.DEV) {
       console.log('ProtectedRoute: Redirecionando admin para dashboard do admin.');
