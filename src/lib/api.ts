@@ -43,9 +43,8 @@ export interface RegisterData {
 interface RegisterRequestData {
   email: string;
   password: string;
+  confirmPassword: string;
   name: string;
-  firstName?: string;
-  lastName?: string;
   birthDate?: string;
 }
 
@@ -335,10 +334,9 @@ class ApiClient {
 
     const requestData: RegisterRequestData = {
       name: fullName,
-      firstName: trimmedFirstName,
-      lastName: trimmedLastName,
       email: data.email.trim().toLowerCase(),
       password: data.password,
+      confirmPassword: data.confirmPassword,
       birthDate: data.birthDate,
     };
     
