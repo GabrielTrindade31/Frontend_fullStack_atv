@@ -400,14 +400,39 @@ class ApiClient {
     });
     
     // Verifica se a resposta tem user antes de normalizar
-    if (!response || !response.user) {
-      throw new Error('Resposta inválida do servidor: usuário não encontrado');
+    if (!response) {
+      throw new Error('Resposta inválida do servidor: nenhuma resposta recebida');
+    }
+    
+    // Tenta diferentes formatos de resposta
+    let userData: User | null = null;
+    let permissionsData: string[] = [];
+    
+    if (response.user) {
+      userData = response.user;
+      permissionsData = response.permissions || [];
+    } else if ((response as any).data?.user) {
+      // Formato alternativo: { data: { user, permissions } }
+      userData = (response as any).data.user;
+      permissionsData = (response as any).data.permissions || [];
+    } else if ((response as any).data && typeof (response as any).data === 'object') {
+      // Se data é o próprio usuário
+      userData = (response as any).data;
+      permissionsData = (response as any).permissions || [];
+    }
+    
+    if (!userData) {
+      // Log detalhado em desenvolvimento
+      if (typeof window !== 'undefined' && import.meta.env.DEV) {
+        console.error('getMe - Resposta inesperada:', response);
+      }
+      throw new Error('Resposta inválida do servidor: usuário não encontrado na resposta');
     }
     
     // Normaliza a resposta para garantir que dateOfBirth está presente
     return {
-      ...response,
-      user: this.normalizeUser(response.user),
+      user: this.normalizeUser(userData),
+      permissions: permissionsData,
     };
   }
 

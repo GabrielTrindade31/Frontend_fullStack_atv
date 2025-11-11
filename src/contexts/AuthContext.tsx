@@ -31,12 +31,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPermissions(storedPermissions);
   }, []);
 
-  const refreshUser = useCallback(async () => {
+  const refreshUser = useCallback(async (silentFail = false) => {
     try {
       const accessToken = await authService.ensureValidToken();
       if (!accessToken) {
-        setUser(null);
-        setPermissions([]);
+        if (!silentFail) {
+          setUser(null);
+          setPermissions([]);
+        }
         return;
       }
 
@@ -47,9 +49,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       authService.setPermissions(data.permissions);
     } catch (error) {
       console.error('Erro ao carregar usuário:', error);
-      authService.clearAuth();
-      setUser(null);
-      setPermissions([]);
+      // Se silentFail for true, não limpa a autenticação (mantém o usuário do storage)
+      if (!silentFail) {
+        authService.clearAuth();
+        setUser(null);
+        setPermissions([]);
+      } else {
+        // Apenas loga o erro, mas mantém o usuário do storage
+        if (import.meta.env.DEV) {
+          console.warn('Erro ao atualizar dados do usuário, mantendo dados do storage');
+        }
+      }
     }
   }, []);
 
@@ -57,6 +67,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initializeAuth = async () => {
       setIsLoading(true);
       loadUserFromStorage();
+      
+      // Verifica se há usuário no storage
+      const storedUser = authService.getUser();
 
       // Verifica se há tokens e tenta validar
       const accessToken = authService.getAccessToken();
@@ -72,8 +85,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setPermissions([]);
           }
         } else {
-          // Token válido, carrega dados do usuário
-          await refreshUser();
+          // Token válido
+          // Se já temos um usuário válido no storage, não precisa chamar getMe imediatamente
+          // Apenas tenta atualizar em background (silentFail = true)
+          if (storedUser) {
+            // Tenta atualizar em background, mas não falha se der erro
+            refreshUser(true);
+          } else {
+            // Se não temos usuário no storage, precisa buscar
+            await refreshUser();
+          }
           authService.startRefreshTimer();
         }
       }
