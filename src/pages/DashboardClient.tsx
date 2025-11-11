@@ -3,7 +3,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useToast } from "../contexts/ToastContext";
 
 export default function ClientDashboard() {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading, isAuthenticated } = useAuth();
   const { success } = useToast();
   const navigate = useNavigate();
 
@@ -13,9 +13,36 @@ export default function ClientDashboard() {
     navigate("/");
   };
 
+  // Mostra loading enquanto carrega
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] relative z-30">
+        <div className="text-white text-xl">Carregando...</div>
+      </div>
+    );
+  }
+
+  // Se não está autenticado, não deveria chegar aqui (ProtectedRoute bloqueia)
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] relative z-30">
+        <div className="text-white text-xl">Acesso negado</div>
+      </div>
+    );
+  }
+
+  // Se user não estiver disponível, mostra mensagem
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] relative z-30">
+        <div className="text-white text-xl">Carregando dados do usuário...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center gap-6 w-full max-w-4xl mx-auto p-6">
-      <div className="w-full bg-gray-800/90 backdrop-blur-md rounded-xl shadow-2xl border border-gray-700/60 p-8">
+    <div className="flex flex-col items-center justify-center gap-6 w-full max-w-4xl mx-auto p-6 relative z-30">
+      <div className="w-full bg-gray-800/90 backdrop-blur-md rounded-xl shadow-2xl border border-gray-700/60 p-8 relative z-30">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-white">Dashboard do Cliente</h1>
           <button
