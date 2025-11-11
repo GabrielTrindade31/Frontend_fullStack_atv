@@ -121,6 +121,7 @@ export default function CadastroPage() {
                 value={form.name}
                 onChange={handleChange}
                 placeholder="Seu nome"
+                autoComplete="name"
                 className="w-full px-3 py-2 border border-purple-500/50 rounded-lg bg-purple-950/60 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
                 required
               />
@@ -136,6 +137,7 @@ export default function CadastroPage() {
                 value={form.email}
                 onChange={handleChange}
                 placeholder="seu@email.com"
+                autoComplete="email"
                 className="w-full px-3 py-2 border border-purple-500/50 rounded-lg bg-purple-950/60 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
                 required
               />
@@ -151,6 +153,7 @@ export default function CadastroPage() {
                 value={form.password}
                 onChange={handleChange}
                 placeholder="********"
+                autoComplete="new-password"
                 className="w-full px-3 py-2 border border-purple-500/50 rounded-lg bg-purple-950/60 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
                 required
               />
@@ -165,6 +168,7 @@ export default function CadastroPage() {
                 id="dateOfBirth"
                 value={form.dateOfBirth}
                 onChange={handleChange}
+                autoComplete="bday"
                 className="w-full px-3 py-2 border border-purple-500/50 rounded-lg bg-purple-950/60 text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
                 required
               />
@@ -180,6 +184,7 @@ export default function CadastroPage() {
                 value={form.confirmPassword}
                 onChange={handleChange}
                 placeholder="********"
+                autoComplete="new-password"
                 className="w-full px-3 py-2 border border-purple-500/50 rounded-lg bg-purple-950/60 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
                 required
               />

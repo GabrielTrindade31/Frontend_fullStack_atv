@@ -316,18 +316,17 @@ class ApiClient {
     // Log para debug (apenas em desenvolvimento)
     if (typeof window !== 'undefined' && import.meta.env.DEV) {
       console.log('GoogleLogin - Enviando dados:', {
-        endpoint: '/auth/google',
+        endpoint: '/auth/login/google',
         hasIdToken: !!data.idToken,
         idTokenLength: data.idToken?.length,
         baseURL: this.baseURL,
-        fullURL: `${this.baseURL}/auth/google`,
+        fullURL: `${this.baseURL}/auth/login/google`,
       });
     }
     
     try {
-      // Tenta primeiro com /auth/google (formato mais comum)
-      // Se falhar com 404, pode tentar /auth/login/google como fallback
-      const response = await this.request<AuthResponse>('/auth/google', {
+      // Prioriza o endpoint documentado no Swagger
+      const response = await this.request<AuthResponse>('/auth/login/google', {
         method: 'POST',
         body: JSON.stringify(data),
       });
@@ -344,14 +343,27 @@ class ApiClient {
           message: error.message,
           status: error.status,
           details: error.details,
-          endpoint: '/auth/google',
+          endpoint: '/auth/login/google',
         });
         
-        // Se for 404, sugere tentar outro endpoint
+        // Se for 404, tenta endpoint alternativo comumente usado
         if (error.status === 404) {
-          console.warn('GoogleLogin - Endpoint /auth/google não encontrado. Verifique se o backend usa /auth/login/google ou outro endpoint.');
+          console.warn('GoogleLogin - Endpoint /auth/login/google não encontrado. Tentando /auth/google como fallback.');
         }
       }
+
+      // Fallback para implementações que utilizam /auth/google
+      if (error.status === 404) {
+        const response = await this.request<AuthResponse>('/auth/google', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        });
+        return {
+          ...response,
+          user: this.normalizeUser(response.user),
+        };
+      }
+
       throw error;
     }
   }
@@ -434,4 +446,5 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);
+
 

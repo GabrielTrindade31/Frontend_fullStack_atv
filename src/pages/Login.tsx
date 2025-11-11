@@ -98,6 +98,7 @@ export default function LoginPage() {
             value={form.email}
             onChange={handleChange}
             placeholder="seu@email.com"
+            autoComplete="email"
             className="w-full px-3 py-2 border border-purple-500/50 rounded-lg bg-purple-950/60 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
             required
           />
@@ -113,6 +114,7 @@ export default function LoginPage() {
             value={form.password}
             onChange={handleChange}
             placeholder="********"
+            autoComplete="current-password"
             className="w-full px-3 py-2 border border-purple-500/50 rounded-lg bg-purple-950/60 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
             required
           />
