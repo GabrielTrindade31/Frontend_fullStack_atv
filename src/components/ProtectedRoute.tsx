@@ -52,13 +52,19 @@ export default function ProtectedRoute({
 
   // Se requer admin mas não é admin, redireciona para dashboard do cliente
   if (requireAdmin && !isAdmin) {
-    console.warn('ProtectedRoute: Requer admin mas usuário não é admin. Role:', user?.role);
+    // Log apenas em desenvolvimento
+    if (import.meta.env.DEV) {
+      console.log('ProtectedRoute: Redirecionando usuário não-admin para dashboard do cliente. Role:', user?.role);
+    }
     return <Navigate to="/dashboard/client" replace />;
   }
 
   // Se requer cliente mas não é cliente (é admin), redireciona para dashboard do admin
   if (requireClient && !isClient) {
-    console.warn('ProtectedRoute: Requer cliente mas usuário é admin. Redirecionando para admin dashboard.');
+    // Log apenas em desenvolvimento
+    if (import.meta.env.DEV) {
+      console.log('ProtectedRoute: Redirecionando admin para dashboard do admin.');
+    }
     return <Navigate to="/dashboard/admin" replace />;
   }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { useToast } from "../contexts/ToastContext";
 import { authService } from "../lib/auth";
 import { redirectToDashboard } from "../lib/redirect";
 
@@ -15,14 +16,17 @@ export default function CadastroPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { register, isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { success, error: showError } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!authLoading && isAuthenticated && user) {
+      // Mostra toast de sucesso ao cadastrar
+      success(`Conta criada com sucesso! Bem-vindo(a), ${user.name || 'usuário'}!`);
       // Redireciona baseado no role do usuário
       redirectToDashboard(user, navigate);
     }
-  }, [isAuthenticated, authLoading, user, navigate]);
+  }, [isAuthenticated, authLoading, user, navigate, success]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.id]: e.target.value });
@@ -75,10 +79,12 @@ export default function CadastroPage() {
         dateOfBirth: form.dateOfBirth,
         role: 'client'
       });
+      // O toast e redirecionamento serão feitos pelo useEffect
     } catch (err: any) {
       // Exibe a mensagem de erro retornada pelo backend
       const errorMessage = err.message || "Erro ao cadastrar. Tente novamente.";
       setError(errorMessage);
+      showError(errorMessage);
       
       // Log para debug (apenas em desenvolvimento)
       if (import.meta.env.DEV) {

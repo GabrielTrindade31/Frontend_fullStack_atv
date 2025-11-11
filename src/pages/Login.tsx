@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import TextType from "../components/shared/TextType";
 import GoogleLoginButton from "../components/auth/GoogleLoginButton";
 import { useAuth } from "../hooks/useAuth";
+import { useToast } from "../contexts/ToastContext";
 import { authService } from "../lib/auth";
 import { redirectToDashboard } from "../lib/redirect";
 import MagnetLines from "@/components/shared/MagnetLines";
@@ -12,14 +13,17 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login, isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { success, error: showError } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!authLoading && isAuthenticated && user) {
+      // Mostra toast de sucesso ao fazer login
+      success(`Login realizado com sucesso! Bem-vindo(a), ${user.name || 'usuário'}!`);
       // Redireciona baseado no role do usuário
       redirectToDashboard(user, navigate);
     }
-  }, [isAuthenticated, authLoading, user, navigate]);
+  }, [isAuthenticated, authLoading, user, navigate, success]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.id]: e.target.value });
@@ -46,9 +50,11 @@ export default function LoginPage() {
 
     try {
       await login(form);
-      // O redirecionamento será feito pelo useEffect
+      // O toast e redirecionamento serão feitos pelo useEffect
     } catch (err: any) {
-      setError(err.message || "Erro ao fazer login. Verifique suas credenciais.");
+      const errorMessage = err.message || "Erro ao fazer login. Verifique suas credenciais.";
+      setError(errorMessage);
+      showError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -144,7 +150,10 @@ export default function LoginPage() {
       {/* Botão do Google */}
       <div className="mb-4">
         <GoogleLoginButton 
-          onError={(errorMsg) => setError(errorMsg)}
+          onError={(errorMsg) => {
+            setError(errorMsg);
+            showError(errorMsg);
+          }}
         />
       </div>
 

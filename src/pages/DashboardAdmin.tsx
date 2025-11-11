@@ -1,9 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { useToast } from "../contexts/ToastContext";
 import { useEffect } from "react";
 
 export default function AdminDashboard() {
   const { user, logout, isLoading, isAuthenticated, isAdmin } = useAuth();
+  const { success } = useToast();
   const navigate = useNavigate();
 
   // Debug: Log para verificar o estado
@@ -21,6 +23,7 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     await logout();
+    success("Logout realizado com sucesso. Até logo!");
     navigate("/");
   };
 

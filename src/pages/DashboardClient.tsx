@@ -1,12 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { useToast } from "../contexts/ToastContext";
 
 export default function ClientDashboard() {
   const { user, logout } = useAuth();
+  const { success } = useToast();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await logout();
+    success("Logout realizado com sucesso. Até logo!");
     navigate("/");
   };
 

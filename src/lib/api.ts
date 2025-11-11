@@ -268,6 +268,9 @@ class ApiClient {
 
   // Normaliza a resposta do backend para a interface User do frontend
   private normalizeUser(user: any): User {
+    if (!user) {
+      throw new Error('Usuário não encontrado na resposta do servidor');
+    }
     return {
       ...user,
       // Converte birthDate (backend) para dateOfBirth (frontend) se necessário
@@ -395,6 +398,11 @@ class ApiClient {
         Authorization: `Bearer ${accessToken}`,
       },
     });
+    
+    // Verifica se a resposta tem user antes de normalizar
+    if (!response || !response.user) {
+      throw new Error('Resposta inválida do servidor: usuário não encontrado');
+    }
     
     // Normaliza a resposta para garantir que dateOfBirth está presente
     return {
