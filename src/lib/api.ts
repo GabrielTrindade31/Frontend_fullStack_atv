@@ -16,6 +16,9 @@ export interface User {
   pictureUrl: string | null;
   createdAt: string;
   updatedAt: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  birthDate?: string | null;
 }
 
 export interface AuthResponse {
@@ -31,7 +34,9 @@ export interface RegisterData {
   email: string;
   password: string;
   confirmPassword: string;
-  name: string;
+  firstName: string;
+  lastName: string;
+  birthDate: string;
 }
 
 // Interface para dados enviados ao backend
@@ -39,6 +44,9 @@ interface RegisterRequestData {
   email: string;
   password: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
+  birthDate?: string;
 }
 
 export interface LoginData {
@@ -120,6 +128,9 @@ class ApiClient {
       email: 'Email',
       password: 'Senha',
       confirmPassword: 'Confirmar Senha',
+      firstName: 'Nome',
+      lastName: 'Sobrenome',
+      birthDate: 'Data de Nascimento',
       role: 'Perfil',
     };
     return translations[field] || field;
@@ -311,15 +322,24 @@ class ApiClient {
       pictureUrl: user.pictureUrl || null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      firstName: user.firstName ?? user.nome ?? null,
+      lastName: user.lastName ?? user.sobrenome ?? user.surname ?? null,
+      birthDate: user.birthDate ?? user.dataNascimento ?? null,
     };
   }
 
   async register(data: RegisterData): Promise<AuthResponse> {
-    // Baseado na documentação, o backend espera apenas: name, email, password
+    const trimmedFirstName = data.firstName.trim();
+    const trimmedLastName = data.lastName.trim();
+    const fullName = `${trimmedFirstName} ${trimmedLastName}`.replace(/\s+/g, ' ').trim();
+
     const requestData: RegisterRequestData = {
-      name: data.name.trim(),
+      name: fullName,
+      firstName: trimmedFirstName,
+      lastName: trimmedLastName,
       email: data.email.trim().toLowerCase(),
       password: data.password,
+      birthDate: data.birthDate,
     };
     
     const response = await this.request<AuthResponse>('/auth/register', {
@@ -348,59 +368,89 @@ class ApiClient {
   }
 
   async googleLogin(data: GoogleLoginData): Promise<AuthResponse> {
-    // Log para debug (apenas em desenvolvimento)
-    if (typeof window !== 'undefined' && import.meta.env.DEV) {
-      console.log('GoogleLogin - Enviando dados:', {
-        endpoint: '/auth/login/google',
-        hasIdToken: !!data.idToken,
-        idTokenLength: data.idToken?.length,
-        baseURL: this.baseURL,
-        fullURL: `${this.baseURL}/auth/login/google`,
-      });
-    }
-    
-    try {
-      // Prioriza o endpoint documentado no Swagger
-      const response = await this.request<AuthResponse>('/auth/login/google', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
-      
-      // Normaliza a resposta
-      return {
-        ...response,
-        user: this.normalizeUser(response.user),
-      };
-    } catch (error: any) {
-      // Log detalhado do erro
-      if (typeof window !== 'undefined' && import.meta.env.DEV) {
-        console.error('GoogleLogin - Erro detalhado:', {
-          message: error.message,
-          status: error.status,
-          details: error.details,
-          endpoint: '/auth/login/google',
-        });
-        
-        // Se for 404, tenta endpoint alternativo comumente usado
-        if (error.status === 404) {
-          console.warn('GoogleLogin - Endpoint /auth/login/google não encontrado. Tentando /auth/google como fallback.');
+    const endpoints = ['/auth/login/google', '/auth/google', '/auth/google/login'];
+    const payloads = [
+      { label: 'idToken', body: { idToken: data.idToken } },
+      { label: 'token', body: { token: data.idToken } },
+      { label: 'credential', body: { credential: data.idToken } },
+    ];
+
+    let lastError: unknown = null;
+
+    for (const endpoint of endpoints) {
+      for (let index = 0; index < payloads.length; index += 1) {
+        const payload = payloads[index];
+
+        // Log para debug (apenas em desenvolvimento)
+        if (typeof window !== 'undefined' && import.meta.env.DEV) {
+          console.log('GoogleLogin - Tentando login com Google', {
+            endpoint,
+            payload: payload.label,
+            hasIdToken: !!data.idToken,
+            idTokenLength: data.idToken?.length,
+            baseURL: this.baseURL,
+            fullURL: `${this.baseURL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`,
+          });
+        }
+
+        try {
+          const response = await this.request<AuthResponse>(endpoint, {
+            method: 'POST',
+            body: JSON.stringify(payload.body),
+          });
+
+          return {
+            ...response,
+            user: this.normalizeUser(response.user),
+          };
+        } catch (error: unknown) {
+          lastError = error;
+
+          const statusValue =
+            typeof error === 'object' && error !== null && 'status' in error
+              ? (error as { status?: unknown }).status
+              : undefined;
+          const statusCode = typeof statusValue === 'number' ? statusValue : undefined;
+
+          if (typeof window !== 'undefined' && import.meta.env.DEV) {
+            const detailsValue =
+              typeof error === 'object' && error !== null && 'details' in error
+                ? (error as { details?: unknown }).details
+                : undefined;
+            const messageValue =
+              typeof error === 'object' && error !== null && 'message' in error && typeof (error as { message?: unknown }).message === 'string'
+                ? (error as { message: string }).message
+                : undefined;
+
+            console.error('GoogleLogin - Erro ao tentar login com Google', {
+              endpoint,
+              payload: payload.label,
+              message: messageValue,
+              status: statusCode ?? statusValue,
+              details: detailsValue,
+            });
+          }
+
+          if (statusCode === 404) {
+            // Endpoint não existe, tenta o próximo
+            break;
+          }
+
+          if ((statusCode === 400 || statusCode === 422) && index < payloads.length - 1) {
+            // Tenta próximo formato de payload
+            continue;
+          }
+
+          throw error;
         }
       }
-
-      // Fallback para implementações que utilizam /auth/google
-      if (error.status === 404) {
-        const response = await this.request<AuthResponse>('/auth/google', {
-          method: 'POST',
-          body: JSON.stringify(data),
-        });
-        return {
-          ...response,
-          user: this.normalizeUser(response.user),
-        };
-      }
-
-      throw error;
     }
+
+    if (lastError) {
+      throw lastError instanceof Error ? lastError : new Error('Erro ao fazer login com Google');
+    }
+
+    throw new Error('Erro ao fazer login com Google');
   }
 
   async refreshToken(data: RefreshTokenData): Promise<AuthResponse> {

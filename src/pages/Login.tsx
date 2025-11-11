@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login, isAuthenticated, isLoading: authLoading, user } = useAuth();
   const { success, error: showError } = useToast();
   const navigate = useNavigate();
@@ -51,8 +52,15 @@ export default function LoginPage() {
     try {
       await login(form);
       // O toast e redirecionamento serão feitos pelo useEffect
-    } catch (err: any) {
-      const errorMessage = err.message || "Erro ao fazer login. Verifique suas credenciais.";
+    } catch (err: unknown) {
+      const fallbackMessage = "Erro ao fazer login. Verifique suas credenciais.";
+      let errorMessage = fallbackMessage;
+
+      if (err && typeof err === "object" && "message" in err && typeof (err as { message?: unknown }).message === "string") {
+        const message = (err as { message: string }).message;
+        errorMessage = message.trim() ? message : fallbackMessage;
+      }
+
       setError(errorMessage);
       showError(errorMessage);
     } finally {
@@ -114,16 +122,25 @@ export default function LoginPage() {
           <label htmlFor="password" className="block text-sm font-bold text-purple-200 mb-1">
             Senha
           </label>
-          <input
-            type="password"
-            id="password"
-            value={form.password}
-            onChange={handleChange}
-            placeholder="********"
-            autoComplete="current-password"
-            className="w-full px-3 py-2 border border-purple-500/50 rounded-lg bg-purple-950/60 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
-            required
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              id="password"
+              value={form.password}
+              onChange={handleChange}
+              placeholder="********"
+              autoComplete="current-password"
+              className="w-full px-3 py-2 pr-24 border border-purple-500/50 rounded-lg bg-purple-950/60 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-purple-200 hover:text-purple-100"
+            >
+              {showPassword ? "Ocultar" : "Mostrar"}
+            </button>
+          </div>
         </div>
 
         {error && <p className="text-red-500 text-sm text-center">{error}</p>}
