@@ -166,7 +166,9 @@ class ApiClient {
       let errorDetails: any = null;
       
       // Mensagens específicas para erros comuns
-      if (response.status === 404) {
+      if (response.status === 400) {
+        errorMessage = 'Erro 400: Requisição inválida. Verifique se os dados estão no formato correto.';
+      } else if (response.status === 404) {
         errorMessage = `Endpoint não encontrado: ${url}. Verifique se a URL da API está correta: ${this.baseURL}`;
       } else if (response.status === 422) {
         // Erro de validação - precisa extrair detalhes
@@ -184,8 +186,20 @@ class ApiClient {
         const errorData = await responseClone.json();
         errorDetails = errorData;
         
+        // Para erro 400 (Bad Request), tenta extrair detalhes
+        if (response.status === 400) {
+          if (errorData.message && typeof errorData.message === 'string') {
+            errorMessage = `Erro 400: ${errorData.message}`;
+          } else if (errorData.error && typeof errorData.error === 'string') {
+            errorMessage = `Erro 400: ${errorData.error}`;
+          } else if (errorData.detail && typeof errorData.detail === 'string') {
+            errorMessage = `Erro 400: ${errorData.detail}`;
+          } else if (typeof errorData === 'string') {
+            errorMessage = `Erro 400: ${errorData}`;
+          }
+        }
         // Para erro 422, extrai mensagens de validação detalhadas
-        if (response.status === 422) {
+        else if (response.status === 422) {
           // Tenta diferentes formatos de resposta de validação
           if (errorData.message && typeof errorData.message === 'string') {
             errorMessage = errorData.message;
@@ -221,8 +235,8 @@ class ApiClient {
           }
         }
       } catch (parseError) {
-        // Se não conseguir parsear JSON, tenta ler como texto para 422
-        if (response.status === 422) {
+        // Se não conseguir parsear JSON, tenta ler como texto para 400 e 422
+        if (response.status === 400 || response.status === 422) {
           try {
             const textResponse = response.clone();
             const text = await textResponse.text();
@@ -299,16 +313,47 @@ class ApiClient {
   }
 
   async googleLogin(data: GoogleLoginData): Promise<AuthResponse> {
-    const response = await this.request<AuthResponse>('/auth/login/google', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    // Log para debug (apenas em desenvolvimento)
+    if (typeof window !== 'undefined' && import.meta.env.DEV) {
+      console.log('GoogleLogin - Enviando dados:', {
+        endpoint: '/auth/google',
+        hasIdToken: !!data.idToken,
+        idTokenLength: data.idToken?.length,
+        baseURL: this.baseURL,
+        fullURL: `${this.baseURL}/auth/google`,
+      });
+    }
     
-    // Normaliza a resposta para garantir que dateOfBirth está presente
-    return {
-      ...response,
-      user: this.normalizeUser(response.user),
-    };
+    try {
+      // Tenta primeiro com /auth/google (formato mais comum)
+      // Se falhar com 404, pode tentar /auth/login/google como fallback
+      const response = await this.request<AuthResponse>('/auth/google', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      
+      // Normaliza a resposta para garantir que dateOfBirth está presente
+      return {
+        ...response,
+        user: this.normalizeUser(response.user),
+      };
+    } catch (error: any) {
+      // Log detalhado do erro
+      if (typeof window !== 'undefined' && import.meta.env.DEV) {
+        console.error('GoogleLogin - Erro detalhado:', {
+          message: error.message,
+          status: error.status,
+          details: error.details,
+          endpoint: '/auth/google',
+        });
+        
+        // Se for 404, sugere tentar outro endpoint
+        if (error.status === 404) {
+          console.warn('GoogleLogin - Endpoint /auth/google não encontrado. Verifique se o backend usa /auth/login/google ou outro endpoint.');
+        }
+      }
+      throw error;
+    }
   }
 
   async refreshToken(data: RefreshTokenData): Promise<AuthResponse> {

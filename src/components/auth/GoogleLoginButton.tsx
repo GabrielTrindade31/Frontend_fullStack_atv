@@ -80,11 +80,31 @@ export default function GoogleLoginButton({ onError }: GoogleLoginButtonProps) {
     setIsLoading(true);
 
     try {
+      // Log para debug
+      console.log('GoogleLoginButton - Token recebido, fazendo login...', {
+        tokenLength: response.credential.length,
+        tokenPrefix: response.credential.substring(0, 20) + '...',
+      });
+      
       await googleLogin({ idToken: response.credential });
       // O redirecionamento será feito pelo useEffect na página de Login
     } catch (error: any) {
       console.error('Erro no login com Google:', error);
-      onError?.(error.message || 'Erro ao fazer login com Google');
+      
+      // Mensagem de erro mais detalhada
+      let errorMessage = 'Erro ao fazer login com Google';
+      
+      if (error.status === 400) {
+        errorMessage = 'Erro 400: Requisição inválida. Verifique se o Google OAuth está configurado corretamente no backend.';
+      } else if (error.status === 401) {
+        errorMessage = 'Erro 401: Não autorizado. Token do Google inválido ou expirado.';
+      } else if (error.status === 404) {
+        errorMessage = 'Erro 404: Endpoint não encontrado. Verifique se o backend está rodando e a URL está correta.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      onError?.(errorMessage);
     } finally {
       setIsLoading(false);
     }
