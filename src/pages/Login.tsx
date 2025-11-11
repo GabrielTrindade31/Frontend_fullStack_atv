@@ -9,9 +9,19 @@ import { redirectToDashboard } from "../lib/redirect";
 import MagnetLines from "@/components/shared/MagnetLines";
 
 export default function LoginPage() {
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
+  const hasGoogleClientId = googleClientId.trim().length > 0;
+  const maskedGoogleClientId = hasGoogleClientId
+    ? googleClientId.length > 12
+      ? `${googleClientId.slice(0, 6)}…${googleClientId.slice(-6)}`
+      : googleClientId
+    : "";
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showGoogleHelp, setShowGoogleHelp] = useState(!hasGoogleClientId);
+  const [lastGoogleError, setLastGoogleError] = useState<string | null>(null);
   const { login, isAuthenticated, isLoading: authLoading, user } = useAuth();
   const { success, error: showError } = useToast();
   const navigate = useNavigate();
@@ -51,14 +61,44 @@ export default function LoginPage() {
     try {
       await login(form);
       // O toast e redirecionamento serão feitos pelo useEffect
-    } catch (err: any) {
-      const errorMessage = err.message || "Erro ao fazer login. Verifique suas credenciais.";
+    } catch (err: unknown) {
+      const fallbackMessage = "Erro ao fazer login. Verifique suas credenciais.";
+      let errorMessage = fallbackMessage;
+
+      if (err && typeof err === "object" && "message" in err && typeof (err as { message?: unknown }).message === "string") {
+        const message = (err as { message: string }).message;
+        errorMessage = message.trim() ? message : fallbackMessage;
+      }
+
       setError(errorMessage);
       showError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleTogglePasswordVisibility = () => {
+    setShowPassword((prev) => !prev);
+  };
+
+  const handleGoogleError = (errorMsg: string) => {
+    const detailedMessage = errorMsg.includes("400")
+      ? `${errorMsg} Verifique as instruções abaixo para alinhar o frontend e o backend.`
+      : errorMsg;
+
+    setLastGoogleError(errorMsg);
+    setShowGoogleHelp(true);
+    setError(detailedMessage);
+    showError(detailedMessage);
+  };
+
+  const googleTroubleshootingSteps = [
+    "Confirme no backend qual endpoint de login social está disponível (ex.: /auth/login/google ou /auth/google).",
+    "Verifique no backend qual chave o corpo deve receber (idToken, token ou credential) e alinhe com a implementação atual.",
+    "Certifique-se de que o Client ID configurado no Google Cloud Console é do tipo Web e corresponde ao valor usado no backend.",
+    "Abra o console e a aba Network do navegador para capturar a resposta completa do erro 400 e ajustar conforme a documentação do backend.",
+    "Consulte o arquivo TROUBLESHOOTING_GOOGLE_OAUTH.md no projeto para um passo a passo detalhado de configuração e depuração.",
+  ];
 
   if (authLoading) {
     return (
@@ -114,16 +154,27 @@ export default function LoginPage() {
           <label htmlFor="password" className="block text-sm font-bold text-purple-200 mb-1">
             Senha
           </label>
-          <input
-            type="password"
-            id="password"
-            value={form.password}
-            onChange={handleChange}
-            placeholder="********"
-            autoComplete="current-password"
-            className="w-full px-3 py-2 border border-purple-500/50 rounded-lg bg-purple-950/60 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
-            required
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              id="password"
+              value={form.password}
+              onChange={handleChange}
+              placeholder="********"
+              autoComplete="current-password"
+              className="w-full px-3 py-2 pr-24 border border-purple-500/50 rounded-lg bg-purple-950/60 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              required
+            />
+            <button
+              type="button"
+              onClick={handleTogglePasswordVisibility}
+              aria-pressed={showPassword}
+              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-purple-200 hover:text-purple-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
+            >
+              {showPassword ? "Ocultar" : "Mostrar"}
+            </button>
+          </div>
         </div>
 
         {error && <p className="text-red-500 text-sm text-center">{error}</p>}
@@ -149,12 +200,47 @@ export default function LoginPage() {
 
       {/* Botão do Google */}
       <div className="mb-4">
-        <GoogleLoginButton 
-          onError={(errorMsg) => {
-            setError(errorMsg);
-            showError(errorMsg);
-          }}
-        />
+        <GoogleLoginButton onError={handleGoogleError} />
+      </div>
+
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => setShowGoogleHelp((prev) => !prev)}
+          className="w-full text-left text-xs sm:text-sm font-semibold text-purple-200 hover:text-purple-100 transition"
+        >
+          {showGoogleHelp ? "Ocultar dicas para resolver o erro 400 do Google" : "Como resolver erros 400 no login com Google?"}
+        </button>
+
+        {showGoogleHelp && (
+          <div className="rounded-lg border border-purple-500/40 bg-purple-950/40 p-4 text-xs sm:text-sm text-purple-100 space-y-3">
+            {!hasGoogleClientId && (
+              <p className="font-semibold text-purple-50">
+                Nenhum Client ID do Google foi detectado. Configure a variável
+                <code className="mx-1 rounded bg-purple-900 px-1 py-0.5">VITE_GOOGLE_CLIENT_ID</code>
+                no arquivo <code>.env</code> e reinicie o servidor do frontend.
+              </p>
+            )}
+
+            {hasGoogleClientId && maskedGoogleClientId && (
+              <p className="text-purple-200">
+                Client ID detectado: <span className="font-semibold break-all">{maskedGoogleClientId}</span>
+              </p>
+            )}
+
+            {lastGoogleError && (
+              <p className="text-red-300">
+                Último erro recebido: <span className="font-semibold">{lastGoogleError}</span>
+              </p>
+            )}
+
+            <ul className="list-disc space-y-2 pl-4">
+              {googleTroubleshootingSteps.map((step, index) => (
+                <li key={index}>{step}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="mt-4 text-center">
