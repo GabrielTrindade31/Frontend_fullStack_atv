@@ -5,6 +5,7 @@ import MetaBalls from "../components/shared/MetaBalls";
 import GoogleLoginButton from "../components/auth/GoogleLoginButton";
 import { useAuth } from "../hooks/useAuth";
 import { authService } from "../lib/auth";
+import MagnetLines from "@/components/shared/MagnetLines";
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -67,117 +68,115 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col items-center justify-center gap-6 w-full">
-      <div className="text-center mb-4">
-        <TextType
-          text={[
-            "Bem-vindo(a) ",
-            "Conecte-se e comece a usar!",
-            "Acesse sua conta",
-          ]}
-          typingSpeed={60}
-          pauseDuration={1200}
-          showCursor={true}
-          cursorCharacter="_"
-          className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg tracking-wide"
+  <div className="text-center mb-4">
+    <TextType
+      text={[
+        "Bem-vindo(a) ",
+        "Conecte-se e comece a usar!",
+        "Acesse sua conta",
+      ]}
+      typingSpeed={60}
+      pauseDuration={1200}
+      showCursor={true}
+      cursorCharacter="_"
+      className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg tracking-wide"
+    />
+  </div>
+
+  {/* 🧩 Card principal */}
+  <div className="flex bg-white/10 backdrop-blur-md rounded-xl shadow-2xl max-w-5xl w-full border border-purple-500/40 overflow-hidden">
+    {/* 📝 COLUNA ESQUERDA: LOGIN */}
+    <div className="w-full md:w-1/2 p-8 flex flex-col justify-center">
+      <h1 className="text-3xl font-bold mb-6 text-white text-center sm:text-left">
+        Login
+      </h1>
+
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <div className="mb-4">
+          <label htmlFor="email" className="block text-sm font-bold text-purple-200 mb-1">
+            Email
+          </label>
+          <input
+            type="email"
+            id="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="seu@email.com"
+            className="w-full px-3 py-2 border border-purple-500/50 rounded-lg bg-purple-950/60 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
+            required
+          />
+        </div>
+
+        <div className="mb-6">
+          <label htmlFor="password" className="block text-sm font-bold text-purple-200 mb-1">
+            Senha
+          </label>
+          <input
+            type="password"
+            id="password"
+            value={form.password}
+            onChange={handleChange}
+            placeholder="********"
+            className="w-full px-3 py-2 border border-purple-500/50 rounded-lg bg-purple-950/60 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
+            required
+          />
+        </div>
+
+        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+
+        <button 
+          type="submit" 
+          disabled={isLoading}
+          className="w-full bg-purple-500 text-white font-semibold py-2 rounded-lg transition duration-300 ease-in-out hover:bg-purple-400 hover:shadow-lg hover:shadow-purple-400/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? "Entrando..." : "Entrar"}
+        </button>
+      </form>
+
+      {/* Divisor */}
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-purple-700"></div>
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-2 bg-purple-900/10 text-purple-300">ou</span>
+        </div>
+      </div>
+
+      {/* Botão do Google */}
+      <div className="mb-4">
+        <GoogleLoginButton 
+          onError={(errorMsg) => setError(errorMsg)}
         />
       </div>
 
-      {/* 🧩 Card principal */}
-      <div className="flex bg-gray-800 backdrop-blur-md rounded-xl shadow-2xl max-w-5xl w-full border border-gray-700/60 overflow-hidden">
-        {/* 📝 COLUNA ESQUERDA: LOGIN */}
-        <div className="w-full md:w-1/2 p-8 flex flex-col justify-center">
-          <h1 className="text-3xl font-bold mb-6 text-white text-center sm:text-left">
-            Login
-          </h1>
-
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label htmlFor="email" className="block text-sm font-bold text-white mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="seu@email.com"
-                className="w-full px-3 py-2 border border-gray-600 rounded-lg bg-gray-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                required
-              />
-            </div>
-
-            <div className="mb-6">
-              <label htmlFor="password" className="block text-sm font-bold text-white mb-1">
-                Senha
-              </label>
-              <input
-                type="password"
-                id="password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="********"
-                className="w-full px-3 py-2 border border-gray-600 rounded-lg bg-gray-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                required
-              />
-            </div>
-
-            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-
-            <button 
-              type="submit" 
-              disabled={isLoading}
-              className="w-full bg-emerald-400 text-gray-950 font-semibold py-2 rounded-lg transition duration-300 ease-in-out hover:cursor-pointer hover:bg-cyan-500 hover:text-white hover:shadow-lg hover:shadow-cyan-500/50 hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "Entrando..." : "Entrar"}
-            </button>
-          </form>
-
-          {/* Divisor */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-600"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-800 text-gray-400">ou</span>
-            </div>
-          </div>
-
-          {/* Botão do Google */}
-          <div className="mb-4">
-            <GoogleLoginButton 
-              onError={(errorMsg) => setError(errorMsg)}
-            />
-          </div>
-
-          <div className="mt-4 text-center">
-            <Link
-              to="/cadastro"
-              className="text-sm text-white hover:text-emerald-400"
-            >
-              Não possui uma conta? Cadastre-se
-            </Link>
-          </div>
-        </div>
-
-        <div className="hidden md:flex relative w-1/2 items-center justify-center">
-          <MetaBalls
-            color="#ffffff"
-            cursorBallColor="#00ffff"
-            cursorBallSize={2}
-            ballCount={18}
-            animationSize={30}
-            enableMouseInteraction={true}
-            enableTransparency={true}
-            hoverSmoothness={0.08}
-            clumpFactor={1}
-            speed={0.1}
-          />
-
-          {/* brilho leve por cima */}
-          <div className="absolute inset-0 pointer-events-none" />
-        </div>
+      <div className="mt-4 text-center">
+        <Link
+          to="/cadastro"
+          className="text-sm text-purple-200 hover:text-purple-400"
+        >
+          Não possui uma conta? Cadastre-se
+        </Link>
       </div>
     </div>
+
+    {/* 🎨 COLUNA DIREITA */}
+    <div className="hidden md:flex relative w-1/2 items-center justify-center e">
+      <MagnetLines
+        rows={9}
+        columns={9}
+        containerSize="60vmin"
+        lineColor="white"
+        lineWidth="0.8vmin"
+        lineHeight="5vmin"
+        baseAngle={0}
+        style={{ margin: "2rem auto" }}
+      />
+      {/* brilho leve por cima */}
+    </div>
+  </div>
+</div>
+
   );
 }
 

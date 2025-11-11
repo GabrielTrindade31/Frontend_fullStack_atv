@@ -16,7 +16,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col h-[100vh] min-h-screen">
       <GradientBackground />
-      <AppHeader />
       <div className="flex w-full flex-grow items-center justify-center relative z-10 p-4">
         {children}
       </div>
